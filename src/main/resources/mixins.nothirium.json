@@ -1,0 +1,21 @@
+{
+  "required": true,
+  "minVersion": "0.7",
+  "package": "meldexun.nothirium.mc.mixin",
+  "refmap": "mixins.nothirium.refmap.json",
+  "compatibilityLevel": "JAVA_8",
+  "client": [
+    "optifine.MixinDynamicLight",
+    "optifine.MixinEntityRenderer",
+
+    "vertex.MixinWorldRenderer",
+    "vertex.MixinVertexFormat",
+    "vertex.MixinVertexFormatElement",
+    
+    "MixinGuiOverlayDebug",
+    "MixinRenderGlobal"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

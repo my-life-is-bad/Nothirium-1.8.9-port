@@ -1,0 +1,13 @@
+[
+{
+  "modid": "nothirium",
+  "name": "Nothirium",
+  "description": "§aPort of Nothitirium to 1.8.9 by my_life_is_bad",
+  "version": "0.4.8-beta",
+  "mcversion": "1.8.9",
+  "url": "https://github.com/Meldexun/Nothirium",
+  "authorList": ["Meldexun"],
+  "logoFile": "logo.png",
+  "canDisable": false
+}
+]
