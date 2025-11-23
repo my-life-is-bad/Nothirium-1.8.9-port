@@ -20,7 +20,7 @@ apply plugin: 'org.spongepowered.mixin'
 //TODO: Change the version, group, and archivesBaseName to your own.
 version = "0.4.8-beta" // The version number of your mod.
 group = "meldexun.nothirium" // This is the group of the mod (usually domain or your name -> at.manuthebyte)
-archivesBaseName = "Nothirium-1.8.9" // This is the name of the jar that is generated.
+archivesBaseName = "Nothirium-1.8.9-port-1.8.9" // This is the name of the jar that is generated.
 
 sourceCompatibility = targetCompatibility = 1.8 // Java version to compile for.
 compileJava.options.encoding = "UTF-8" // Make sure that the encoding is set to UTF-8, so we have no encoding issues.
