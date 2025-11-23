@@ -1,0 +1,7 @@
+All Rights Reserved (ARR)
+
+This project is a backport of Nothirium by Meldexun (https://github.com/Meldexun).
+
+You are NOT permitted to redistribute, modify, or use this code without explicit permission from the original author (Meldexun).
+
+Porting and other modifications by Abyan Shamsi (aka my-life-is-bad).
