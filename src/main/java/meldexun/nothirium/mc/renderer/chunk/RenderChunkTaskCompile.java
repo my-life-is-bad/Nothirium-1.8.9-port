@@ -3,9 +3,10 @@ package meldexun.nothirium.mc.renderer.chunk;
 import java.util.Arrays;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-//import java.util.stream.IntStream;
+import java.util.stream.IntStream;
 
 import org.lwjgl.opengl.GL11;
+import java.nio.ByteBuffer;
 
 import meldexun.memoryutil.NIOBufferUtil;
 import meldexun.nothirium.api.renderer.chunk.ChunkRenderPass;
@@ -37,11 +38,33 @@ import net.minecraftforge.client.ForgeHooksClient;
 public class RenderChunkTaskCompile extends AbstractRenderChunkTask<RenderChunk> {
 
 	private static final BlockingQueue<RegionRenderCacheBuilder> BUFFER_QUEUE = new LinkedBlockingQueue<>();
-	// static {
-	// 	IntStream.range(0, (Runtime.getRuntime().availableProcessors() - 2) * 2).mapToObj(i -> new RegionRenderCacheBuilder()).forEach(BUFFER_QUEUE::add);
-	// }
-
 	
+	
+	private static final int BYTES_PER_BUFFER = 8 * 1024 * 1024; // 8MB per buffer
+	private static final int MIN_BUFFERS = 1;
+	private static final int BUFFER_COUNT;
+	static {
+		long maxMemBytes = Runtime.getRuntime().maxMemory();
+
+		long maxBufferBytes = (long)(maxMemBytes * 0.3);
+
+		int buffersByMemory = (int)(maxBufferBytes / BYTES_PER_BUFFER);
+
+
+		int cores = Runtime.getRuntime().availableProcessors();
+		int buffersByCores = (cores - 2) * 2;						
+	/* this is the original formula used in Nothirium before commit
+	   "Fix mesh generation for CPUs with less than 3 threads" */
+
+		BUFFER_COUNT = Math.max(MIN_BUFFERS, Math.min(buffersByMemory, buffersByCores));	// calculate the num of buffers by buffersByCores and buffersByMemory
+		for (int i = 0; i < BUFFER_COUNT; ++i) {
+			BUFFER_QUEUE.add(new RegionRenderCacheBuilder());
+		}
+
+		System.out.println("BufferQueue size : " + BUFFER_COUNT);
+	}
+
+
 
 	private final IBlockAccess chunkCache;
 
@@ -77,10 +100,21 @@ public class RenderChunkTaskCompile extends AbstractRenderChunkTask<RenderChunk>
 	}
 
 	private RenderChunkTaskResult compileSection() {
-		RegionRenderCacheBuilder bufferBuilderPack = BUFFER_QUEUE.poll();
-		if (bufferBuilderPack == null) {
-			bufferBuilderPack = new RegionRenderCacheBuilder();
+
+		// RegionRenderCacheBuilder bufferBuilderPack = BUFFER_QUEUE.poll();		1.12.2 has great memory management so we can just let the chunks compile when buffere queue is full
+		// if (bufferBuilderPack == null) {											but in 1.8.9 memory management is crap and we just get java.lang.OutOfMemoryError: Direct buffer memory
+		// 	bufferBuilderPack = new RegionRenderCacheBuilder();					
+		// }
+
+
+		RegionRenderCacheBuilder bufferBuilderPack;	 // so we use this :
+		try {
+			bufferBuilderPack = BUFFER_QUEUE.take(); // blocks until a buffer is free
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			return RenderChunkTaskResult.CANCELLED;
 		}
+
 
 		boolean freeBufferBuilderPack = true;
 		try {
