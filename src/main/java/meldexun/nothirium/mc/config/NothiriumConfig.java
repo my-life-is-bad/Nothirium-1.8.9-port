@@ -1,20 +1,22 @@
 package meldexun.nothirium.mc.config;
 
 import java.io.File;
+import java.util.Arrays;
+
 import meldexun.renderlib.util.GLUtil;
+
 import net.minecraftforge.common.config.Configuration;
+import net.minecraftforge.common.config.ConfigCategory;
+import net.minecraftforge.common.config.Property;
 
 public class NothiriumConfig {
 
 	public static Configuration config;
+	public static final ConfigCategory GENERAL = new ConfigCategory("general");
 
 	public enum RenderEngine {
-
 		AUTOMATIC, GL43, GL42, GL20, GL15;
-
 	}
-
-	public static RenderEngine renderEngine;
 
 	public static RenderEngine getRenderEngine() {
 		return getRenderEngine(renderEngine);
@@ -45,27 +47,34 @@ public class NothiriumConfig {
 		}
 	}
 
+	/*=====GENERAL=====*/
+	public static RenderEngine renderEngine;
+	public static final String[] options = Arrays.stream(RenderEngine.values()).map(Enum::name).toArray(String[]::new);
+	
+	private static Property renderEngineProp;
+
 
 	public static void loadConfig(File file) {
         config = new Configuration(file);
         config.load();
-        renderEngine = NothiriumConfig.parseEnum(config.get("general", "renderEngine", "AUTOMATIC", "Valid values: \nAUTOMATIC \nGL43 \nGL42 \nGL20 \nGL15").getString(), RenderEngine.AUTOMATIC);
+
+		/*=====GENERAL=====*/
+
+		/*-Properties-*/
+		renderEngineProp = config.get(GENERAL.getQualifiedName(), "renderEngine", "AUTOMATIC", "Valid values: \nAUTOMATIC \nGL43 \nGL42 \nGL20 \nGL15");
+		renderEngineProp.setValidValues(options);
+		
+
+		/*-Variable assigning-*/
+        renderEngine = RenderEngine.valueOf(renderEngineProp.getString());
     }
 
-    public static void saveConfig(File file) {
-        config = new Configuration(file);
-        config.get("general", "renderEngine", "AUTOMATIC", "Valid values: \nAUTOMATIC \nGL43 \nGL42 \nGL20 \nGL15").setValue(renderEngine.name());
+    public static void saveConfig() {
+		/*=====GENERAL=====*/
+        renderEngineProp.set(renderEngine.name());
+
         if (config.hasChanged()) {
             config.save();
-        }
-    }
-
-    private static <T extends Enum<T>> T parseEnum(String value, T defaultValue) {
-        try {
-            return Enum.valueOf(defaultValue.getDeclaringClass(), value.toUpperCase());
-        }
-        catch (IllegalArgumentException e) {
-            return defaultValue;
         }
     }
 

@@ -2,40 +2,32 @@ package meldexun.nothirium.mc.config;
 
 import meldexun.nothirium.mc.Nothirium;
 import meldexun.nothirium.mc.config.NothiriumConfig;
-import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraftforge.common.config.ConfigElement;
 import net.minecraftforge.fml.client.config.GuiConfig;
+import net.minecraft.client.Minecraft;
 
-public class NothiriumConfigGui
-extends GuiConfig {
+public class NothiriumConfigGui extends GuiConfig {
     public NothiriumConfigGui(GuiScreen parent) {
-        super(parent, new ConfigElement(NothiriumConfig.config.getCategory("general")).getChildElements(), "nothirium", false, false, "Nothirium");
+        super(
+                parent, 
+                new ConfigElement(NothiriumConfig.config.getCategory(NothiriumConfig.GENERAL.getName())).getChildElements(),
+                Nothirium.MODID, 
+                false,
+                false,
+                "Nothirium"
+        );
     }
 
-    public void onGuiClosed() {
-        super.onGuiClosed();
-        NothiriumConfig.RenderEngine oldRenderEngine = NothiriumConfig.renderEngine;
-        String newRenderEngine = NothiriumConfig.config.get("general", "renderEngine", "AUTOMATIC", "Valid values: \nAUTOMATIC \nGL43 \nGL42 \nGL20 \nGL15").getString();
-        if (!NothiriumConfigGui.isValidEnum(newRenderEngine)) {
-            NothiriumConfig.config.get("general", "renderEngine", "AUTOMATIC", "Valid values: \nAUTOMATIC \nGL43 \nGL42 \nGL20 \nGL15").setValue(oldRenderEngine.name().toUpperCase());
-            return;
-        }
-        NothiriumConfig.config.get("general", "renderEngine", "AUTOMATIC", "Valid values: \nAUTOMATIC \nGL43 \nGL42 \nGL20 \nGL15").setValue(newRenderEngine.toUpperCase());
-        NothiriumConfig.config.save();
-        NothiriumConfig.loadConfig(Nothirium.configFile);
-        if (oldRenderEngine != NothiriumConfig.renderEngine) {
+    @Override
+    protected void actionPerformed(GuiButton button){
+        super.actionPerformed(button);
+        
+        if (button.id == 2000) {
+            NothiriumConfig.config.save();
+            NothiriumConfig.loadConfig(Nothirium.configFile);
             Minecraft.getMinecraft().renderGlobal.loadRenderers();
-        }
-    }
-
-    private static boolean isValidEnum(String value) {
-        try {
-            NothiriumConfig.RenderEngine.valueOf(value.toUpperCase());
-            return true;
-        }
-        catch (Exception e) {
-            return false;
         }
     }
 }
