@@ -3,7 +3,6 @@
 # Nothirium
 
 A port to 1.8.9 of Nothirium v0.4.8-beta which is a mod made by Meldexun.
-
 Original Mod : https://github.com/Meldexun/Nothirium/
 
 # Requirements
