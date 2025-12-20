@@ -101,7 +101,6 @@ public class SectionRenderCache implements IBlockAccess {
 	@Nullable
 	public TileEntity getTileEntity(BlockPos pos) {
 		Chunk chunk = this.getChunk(pos);
-		System.out.println("TileEntity is valid?" + (chunk.getTileEntity(pos, EnumCreateEntityType.CHECK) == null ? "false" : "true"));
 		return chunk == null ? null : chunk.getTileEntity(pos, EnumCreateEntityType.CHECK);
 	}
 
