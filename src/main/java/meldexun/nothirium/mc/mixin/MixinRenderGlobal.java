@@ -37,12 +37,6 @@ public class MixinRenderGlobal {
 		info.setReturnValue("C: 0/0 (s) D: 0, L: 0, pC: 0, pU: 0, aB: 0");
 	}
 
-	// /** {@link RenderGlobal#getRenderedChunks()} */
-	// @Inject(method = "getRenderedChunks", cancellable = true, at = @At("HEAD"))
-	// public void getRenderedChunks(CallbackInfoReturnable<Integer> info) {
-	// 	info.setReturnValue(ChunkRenderManager.renderedSections());
-	// }
-
 	/** {@link RenderGlobal#setupTerrain(Entity, double, ICamera, int, boolean)} */
 	@Inject(method = "setupTerrain", cancellable = true, at = @At(value = "INVOKE", target = "Lnet/minecraft/profiler/Profiler;startSection(Ljava/lang/String;)V", ordinal = 0))
 	public void setupTerrain(Entity viewEntity, double partialTicks, ICamera camera, int frameCount, boolean playerSpectator, CallbackInfo info) {
@@ -62,19 +56,6 @@ public class MixinRenderGlobal {
 		ChunkRenderManager.getRenderer().render(EnumWorldBlockLayerUtil.getChunkRenderPass(blockLayerIn));
 		info.setReturnValue(0);
 	}
-
-	// /** {@link RenderGlobal#updateClouds()} */
-	// @Redirect(method = "updateClouds", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/chunk/ChunkRenderDispatcher;hasNoFreeRenderBuilders()Z"))
-	// public boolean hasNoFreeRenderBuilders(ChunkRenderDispatcher chunkRenderDispatcher) {
-	// 	return false;
-	// }
-
-	/** {@link RenderGlobal#updateClouds()} */
-    @Inject(method={"updateClouds"}, at={@At(value="HEAD")}, cancellable=true)
-    public void skipUpdateClouds(CallbackInfo info) {
-        info.cancel();
-    }
-
 
 	/** {@link RenderGlobal#updateChunks(long)} */
 	@Inject(method = "updateChunks", cancellable = true, at = @At("HEAD"))
