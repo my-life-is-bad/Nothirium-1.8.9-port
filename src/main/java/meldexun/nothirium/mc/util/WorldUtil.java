@@ -3,6 +3,7 @@ package meldexun.nothirium.mc.util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.EmptyChunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 
 public class WorldUtil {
@@ -44,7 +45,7 @@ public class WorldUtil {
 	}
 
 	public static boolean isChunkLoaded(World world, int chunkX, int chunkZ) {
-		return world.getChunkProvider().provideChunk(chunkX, chunkZ) != null;//return world.getChunkProvider().getLoadedChunk(chunkX, chunkZ) != null;
+		return !(world.getChunkProvider().provideChunk(chunkX, chunkZ) instanceof EmptyChunk);//return world.getChunkProvider().getLoadedChunk(chunkX, chunkZ) != null;
 	}
 
 	public static boolean isSectionLoaded(World world, int sectionX, int sectionY, int sectionZ) {
