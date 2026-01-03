@@ -88,7 +88,7 @@ public class SectionRenderCache implements IBlockAccess {
 	}
 
 	@Nullable
-	private Chunk getChunk(BlockPos pos) {
+	public Chunk getChunk(BlockPos pos) {
 		return this.chunkCache.get(pos.getX() >> 4, pos.getZ() >> 4);
 	}
 
@@ -101,7 +101,7 @@ public class SectionRenderCache implements IBlockAccess {
 	@Nullable
 	public TileEntity getTileEntity(BlockPos pos) {
 		Chunk chunk = this.getChunk(pos);
-		return chunk == null ? null : chunk.getTileEntity(pos, EnumCreateEntityType.CHECK);
+		return chunk == null ? null : chunk.getTileEntity(pos, EnumCreateEntityType.QUEUED);
 	}
 
 	@Override
@@ -194,7 +194,7 @@ public class SectionRenderCache implements IBlockAccess {
 		if (!this.blockCache.inBounds(pos.getX(), pos.getY(), pos.getZ())) {
 			return _default;
 		}
-		return this.getBlockState(pos).getBlock().isBlockSolid((IBlockAccess)this, pos, side);//return this.getBlockState(pos).isSideSolid(this, pos, side);
+		return this.getBlockState(pos).getBlock().isSideSolid(this, pos, side);//return this.getBlockState(pos).isSideSolid(this, pos, side);
 	}
 
 	public boolean extendedLevelsInChunkCache() {

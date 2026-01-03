@@ -3,10 +3,8 @@ package meldexun.nothirium.mc.renderer.chunk;
 import java.util.Arrays;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.stream.IntStream;
 
 import org.lwjgl.opengl.GL11;
-import java.nio.ByteBuffer;
 
 import meldexun.memoryutil.NIOBufferUtil;
 import meldexun.nothirium.api.renderer.chunk.ChunkRenderPass;
@@ -28,7 +26,6 @@ import net.minecraft.client.renderer.RegionRenderCacheBuilder;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.EnumWorldBlockLayer;
-import net.minecraft.util.EnumBlockRenderType;
 import net.minecraft.util.BlockPos;
 import net.minecraft.util.BlockPos.MutableBlockPos;
 import net.minecraft.util.Vec3;
@@ -38,8 +35,6 @@ import net.minecraftforge.client.ForgeHooksClient;
 public class RenderChunkTaskCompile extends AbstractRenderChunkTask<RenderChunk> {
 
 	private static final BlockingQueue<RegionRenderCacheBuilder> BUFFER_QUEUE = new LinkedBlockingQueue<>();
-	
-	
 	private static final int BYTES_PER_BUFFER = 8 * 1024 * 1024; // 8MB per buffer
 	private static final int MIN_BUFFERS = 1;
 	private static final int BUFFER_COUNT;
@@ -136,12 +131,15 @@ public class RenderChunkTaskCompile extends AbstractRenderChunkTask<RenderChunk>
 		Minecraft mc = Minecraft.getMinecraft();
 		MutableBlockPos pos = new MutableBlockPos();
 		VisibilityGraph visibilityGraph = new VisibilityGraph();
-
 		for (int x = 0; x < 16; x++) {
 			for (int y = 0; y < 16; y++) {
 				for (int z = 0; z < 16; z++) {
 					pos.set(this.renderChunk.getX() + x, this.renderChunk.getY() + y, this.renderChunk.getZ() + z);
 					IBlockState blockState = this.chunkCache.getBlockState(pos);
+
+                    if (blockState.getBlock().hasTileEntity(blockState)) {
+                        this.chunkCache.getTileEntity(pos);
+                    }
 					renderBlockState(blockState, pos, visibilityGraph, bufferBuilderPack);
 				}
 			}
@@ -150,7 +148,6 @@ public class RenderChunkTaskCompile extends AbstractRenderChunkTask<RenderChunk>
 				return RenderChunkTaskResult.CANCELLED;
 			}
 		}
-
 		VisibilitySet visibilitySet = visibilityGraph.compute();
 
 		if (bufferBuilderPack.getWorldRendererByLayer(EnumWorldBlockLayer.TRANSLUCENT).isDrawing) {
@@ -185,7 +182,7 @@ public class RenderChunkTaskCompile extends AbstractRenderChunkTask<RenderChunk>
 		this.taskDispatcher.runOnRenderThread(() -> {
 			try {
 				if (!this.canceled()) {
-					this.renderChunk.setVisibility(visibilitySet);
+                    this.renderChunk.setVisibility(visibilitySet);
 					for (ChunkRenderPass pass : ChunkRenderPass.ALL) {
 						WorldRenderer bufferBuilder = finishedBufferBuilders[pass.ordinal()];
 						if (bufferBuilder == null) {
