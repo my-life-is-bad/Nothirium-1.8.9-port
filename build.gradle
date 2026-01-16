@@ -18,7 +18,7 @@ apply plugin: "net.minecraftforge.gradle.forge"
 apply plugin: 'org.spongepowered.mixin'
 
 //TODO: Change the version, group, and archivesBaseName to your own.
-version = "0.4.9-beta" // The version number of your mod.
+version = "0.4.9-beta-1" // The version number of your mod.
 group = "meldexun.nothirium" // This is the group of the mod (usually domain or your name -> at.manuthebyte)
 archivesBaseName = "Nothirium-1.8.9-port-1.8.9" // This is the name of the jar that is generated.
 
@@ -68,7 +68,8 @@ dependencies {
     //     exclude module: 'log4j-core'
     // }
 
-    compile 'my-life-is-bad:RenderLib-1.8.9-port:1.8.9-1.4.5@jar'
+    compile 'my-life-is-bad:RenderLib-1.8.9-port:1.8.9-1.4.5.5@jar'
+    compile 'my-life-is-bad:ConfigurationsBackport:1.8.9-1.1@jar'
     if (systemOs.contains("mac"))
     {
         compile 'org.lwjgl.lwjgl:lwjgl_util:2.9.4-nightly-20150209'

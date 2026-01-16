@@ -1,48 +1,42 @@
 package meldexun.nothirium.mc;
 
-import java.io.File;
-
+import net.minecraft.client.Minecraft;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import meldexun.nothirium.mc.config.NothiriumConfig;
 import meldexun.nothirium.mc.config.NothiriumConfig.RenderEngine;
 import net.minecraftforge.common.MinecraftForge;
+import my_life_is_bad.configurationsbackport.common.config.Config;
+import my_life_is_bad.configurationsbackport.common.config.ConfigManager;
+import net.minecraftforge.fml.client.event.ConfigChangedEvent.OnConfigChangedEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.event.FMLConstructionEvent;
-import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
-@Mod(modid = Nothirium.MODID, acceptableRemoteVersions = "*", dependencies = "required-after:renderlib@[1.4.5,)", guiFactory = "meldexun.nothirium.mc.config.NothiriumConfigGuiFactory")
+@Mod(modid = Nothirium.MODID, acceptableRemoteVersions = "*", dependencies = "required-after:renderlib@[1.4.2,);"+"required-after:configurationsbackport@[1.1,)")
 public class Nothirium {
 
-	public static final String MODID = "nothirium";
-	public static final Logger LOGGER = LogManager.getLogger(MODID);
-	public static File configFile;
+    public static final String MODID = "nothirium";
+    public static final Logger LOGGER = LogManager.getLogger(MODID);
 
-	@EventHandler
-	public void onFMLConstructionEvent(FMLConstructionEvent event) {
-		MinecraftForge.EVENT_BUS.register(this);
-	}
+    @EventHandler
+    public void onFMLConstructionEvent(FMLConstructionEvent event) {
+        MinecraftForge.EVENT_BUS.register(this);
+    }
 
-	@EventHandler
-	public void preInit(FMLPreInitializationEvent event) {
-		System.out.print("Preinit config load");
-		configFile = new File(event.getModConfigurationDirectory(), MODID + ".cfg");
+    @SubscribeEvent
+    public void onConfigChangedEvent(OnConfigChangedEvent event) {
+        if (event.modID.equals(MODID)) {
+            RenderEngine oldRenderEngine = NothiriumConfig.renderEngine;
 
-		try {
-				NothiriumConfig.loadConfig(configFile);	//load config
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+            ConfigManager.sync(MODID, Config.Type.INSTANCE);
 
-		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-			try {
-				NothiriumConfig.saveConfig();  //save config on shutdown
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}));
-	}
+            if (event.isWorldRunning && oldRenderEngine != NothiriumConfig.renderEngine) {
+                Minecraft.getMinecraft().renderGlobal.loadRenderers();
+            }
+        }
+    }
 
 }
