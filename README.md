@@ -9,3 +9,4 @@ Original Mod : https://github.com/Meldexun/Nothirium/
 
 It requires RenderLib which i also have ported to 1.8.9
 Link: https://github.com/my-life-is-bad/RenderLib-1.8.9-port
+And also my other mod: https://modrinth.com/mod/configurationsbackport/version/1.8.9-1.1
