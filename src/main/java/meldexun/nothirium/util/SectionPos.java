@@ -1,7 +1,7 @@
 package meldexun.nothirium.util;
 
 import net.minecraft.util.BlockPos;
-import net.minecraft.util.ChunkPos;
+import net.minecraft.world.ChunkCoordIntPair;
 
 public class SectionPos {
 
@@ -19,8 +19,8 @@ public class SectionPos {
 		return of(pos.getX() >> 4, pos.getY() >> 4, pos.getZ() >> 4);
 	}
 
-	public static SectionPos of(ChunkPos chunkPos, int y) {
-		return of(chunkPos.x, y, chunkPos.z);
+	public static SectionPos of(ChunkCoordIntPair chunkPos, int y) {
+		return of(chunkPos.chunkXPos, y, chunkPos.chunkZPos);
 	}
 
 	public static SectionPos of(int x, int y, int z) {
