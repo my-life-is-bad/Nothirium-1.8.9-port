@@ -3,6 +3,7 @@ package meldexun.nothirium.mc.renderer.chunk;
 import java.util.Arrays;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.stream.IntStream;
 
 import org.lwjgl.opengl.GL11;
 
@@ -30,38 +31,21 @@ import net.minecraft.util.BlockPos;
 import net.minecraft.util.BlockPos.MutableBlockPos;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.IBlockAccess;
+import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.client.ForgeHooksClient;
 
 public class RenderChunkTaskCompile extends AbstractRenderChunkTask<RenderChunk> {
 
 	private static final BlockingQueue<RegionRenderCacheBuilder> BUFFER_QUEUE = new LinkedBlockingQueue<>();
-	private static final int BYTES_PER_BUFFER = 8 * 1024 * 1024; // 8MB per buffer
-	private static final int MIN_BUFFERS = 1;
-	private static final int BUFFER_COUNT;
-	static {
-		long maxMemBytes = Runtime.getRuntime().maxMemory();
+    private final IBlockAccess chunkCache;
 
-		long maxBufferBytes = (long)(maxMemBytes * 0.3);
-
-		int buffersByMemory = (int)(maxBufferBytes / BYTES_PER_BUFFER);
-
-
-		int cores = Runtime.getRuntime().availableProcessors();
-		int buffersByCores = (cores - 2) * 2;						
-	/* this is the original formula used in Nothirium before commit
-	   "Fix mesh generation for CPUs with less than 3 threads" */
-
-		BUFFER_COUNT = Math.max(MIN_BUFFERS, Math.min(buffersByMemory, buffersByCores));	// calculate the num of buffers by buffersByCores and buffersByMemory
-		for (int i = 0; i < BUFFER_COUNT; ++i) {
-			BUFFER_QUEUE.add(new RegionRenderCacheBuilder());
-		}
-
-		System.out.println("BufferQueue size : " + BUFFER_COUNT);
-	}
-
-
-
-	private final IBlockAccess chunkCache;
+    static {
+        int buffersByCPU = (Runtime.getRuntime().availableProcessors() - 2) * 2;
+        int buffersByMemory = (int) ((Runtime.getRuntime().maxMemory() * 0.3) / (8 * 1024 * 1024));
+        int bufferCount = Math.max(1, Math.min(buffersByCPU, buffersByMemory));
+        IntStream.range(0, bufferCount).mapToObj(i -> new RegionRenderCacheBuilder()).forEach(BUFFER_QUEUE::add);
+        System.out.println("BufferQueue size : " + bufferCount);
+    }
 
 	public RenderChunkTaskCompile(IChunkRenderer<?> chunkRenderer, IRenderChunkDispatcher taskDispatcher, RenderChunk renderChunk, IBlockAccess chunkCache) {
 		super(chunkRenderer, taskDispatcher, renderChunk);
@@ -95,30 +79,20 @@ public class RenderChunkTaskCompile extends AbstractRenderChunkTask<RenderChunk>
 	}
 
 	private RenderChunkTaskResult compileSection() {
+        RegionRenderCacheBuilder bufferBuilderPack = null;
+        boolean freeBufferBuilderPack = true;
 
-		// RegionRenderCacheBuilder bufferBuilderPack = BUFFER_QUEUE.poll();		1.12.2 has great memory management so we can just let the chunks compile when buffere queue is full
-		// if (bufferBuilderPack == null) {											but in 1.8.9 memory management is crap and we just get java.lang.OutOfMemoryError: Direct buffer memory
-		// 	bufferBuilderPack = new RegionRenderCacheBuilder();					
-		// }
-
-
-		RegionRenderCacheBuilder bufferBuilderPack;	 // so we use this :
-		try {
-			bufferBuilderPack = BUFFER_QUEUE.take(); // blocks until a buffer is free
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			return RenderChunkTaskResult.CANCELLED;
-		}
-
-
-		boolean freeBufferBuilderPack = true;
-		try {
-			freeBufferBuilderPack = compileSection(bufferBuilderPack) != RenderChunkTaskResult.SUCCESSFUL;
-		} finally {
-			if (freeBufferBuilderPack) {
-				freeBuffer(bufferBuilderPack);
-			}
-		}
+        try {
+            bufferBuilderPack = BUFFER_QUEUE.take();
+            freeBufferBuilderPack = compileSection(bufferBuilderPack) != RenderChunkTaskResult.SUCCESSFUL;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return RenderChunkTaskResult.CANCELLED;
+        } finally {
+            if (bufferBuilderPack != null && freeBufferBuilderPack) {
+                freeBuffer(bufferBuilderPack);
+            }
+        }
 
 		return this.canceled() ? RenderChunkTaskResult.CANCELLED : RenderChunkTaskResult.SUCCESSFUL;
 	}
@@ -138,7 +112,10 @@ public class RenderChunkTaskCompile extends AbstractRenderChunkTask<RenderChunk>
 					IBlockState blockState = this.chunkCache.getBlockState(pos);
 
                     if (blockState.getBlock().hasTileEntity(blockState)) {
-                        this.chunkCache.getTileEntity(pos);
+                        Chunk chunk = ((SectionRenderCache) chunkCache).getChunk(pos);
+                        if (chunk != null && chunk.getTileEntityMap().get(pos.getImmutable()) == null){
+                            chunk.tileEntityPosQueue.add(pos.getImmutable());
+                        }
                     }
 					renderBlockState(blockState, pos, visibilityGraph, bufferBuilderPack);
 				}
@@ -204,16 +181,13 @@ public class RenderChunkTaskCompile extends AbstractRenderChunkTask<RenderChunk>
 	}
 
 	public void renderBlockState(IBlockState blockState, BlockPos pos, VisibilityGraph visibilityGraph, RegionRenderCacheBuilder bufferBuilderPack) {
-		// if (blockState.getRenderType() == EnumBlockRenderType.INVISIBLE) {
-		// 	return;
-		// }
 		Block block = blockState.getBlock();
-        if (block.getRenderType() == 0) {
+        if (block.getRenderType() == -1) {
             return;
         }
 
 		for (Direction dir : Direction.ALL) {
-			if (block.isSideSolid(this.chunkCache, pos, EnumFacingUtil.getFacing(dir))) {//blockState.doesSideBlockRendering(this.chunkCache, pos, EnumFacingUtil.getFacing(dir))
+			if (block.doesSideBlockRendering(this.chunkCache, pos, EnumFacingUtil.getFacing(dir))) {
 				visibilityGraph.setOpaque(pos.getX(), pos.getY(), pos.getZ(), dir);
 			}
 		}

@@ -86,4 +86,8 @@ public class RenderChunkDispatcher implements IRenderChunkDispatcher {
 		this.update();
 	}
 
+    public boolean hasPendingAsyncTasks() {
+        ForkJoinPool pool = (ForkJoinPool) this.executor;
+        return pool.getQueuedTaskCount() > 0 || !pool.isQuiescent();
+    }
 }
