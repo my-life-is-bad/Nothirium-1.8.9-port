@@ -16,18 +16,6 @@ import net.minecraft.util.BlockPos;
 
 public class Optifine {
 
-	public static final boolean OPTIFINE_DETECTED;
-	static {
-		boolean flag = false;
-		try {
-			Class.forName("optifine.OptiFineClassTransformer", false, NothiriumPlugin.class.getClassLoader());
-			flag = true;
-		} catch (ClassNotFoundException e) {
-			// ignore
-		}
-		OPTIFINE_DETECTED = flag;
-	}
-
 	public static final ReflectionField<Boolean> IS_SHADOW_PASS = new ReflectionField<>("net.optifine.shaders.Shaders", "isShadowPass", "isShadowPass");
 	public static final ReflectionMethod<Boolean> IS_FOG_OFF = new ReflectionMethod<>("Config", "isFogOff", "isFogOff");
 	public static final ReflectionField<Boolean> FOG_STANDARD = new ReflectionField<>("net.minecraft.client.renderer.EntityRenderer", "fogStandard", "fogStandard");

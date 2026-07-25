@@ -1,5 +1,20 @@
 package meldexun.nothirium.mc.asm;
 
+import com.google.common.collect.BiMap;
+import meldexun.asmutil2.ASMUtil;
+import meldexun.asmutil2.HashMapClassNodeClassTransformer;
+import meldexun.asmutil2.IClassTransformerRegistry;
+import meldexun.asmutil2.NonLoadingClassWriter;
+import meldexun.asmutil2.reader.ClassUtil;
+import meldexun.nothirium.mc.asm.compatibility.OptifineTransformer;
+import meldexun.nothirium.mc.asm.compatibility.ReplayModTransformer;
+import net.minecraft.launchwrapper.IClassTransformer;
+import net.minecraft.launchwrapper.Launch;
+import net.minecraftforge.fml.common.asm.transformers.deobf.FMLDeobfuscatingRemapper;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.*;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.reflect.Field;
@@ -11,35 +26,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.zip.ZipFile;
-
-import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.VarInsnNode;
-import org.objectweb.asm.tree.FieldInsnNode;
-import org.objectweb.asm.tree.JumpInsnNode;
-import org.objectweb.asm.tree.LabelNode;
-import org.objectweb.asm.tree.MethodInsnNode;
-
-import com.google.common.collect.BiMap;
-
-import meldexun.asmutil2.ASMUtil;
-import meldexun.asmutil2.HashMapClassNodeClassTransformer;
-import meldexun.asmutil2.IClassTransformerRegistry;
-import meldexun.asmutil2.NonLoadingClassWriter;
-import meldexun.asmutil2.reader.ClassUtil;
-//import meldexun.nothirium.mc.asm.compatibility.BetterFoliageTransformer;
-//import meldexun.nothirium.mc.asm.compatibility.ChunkAnimatorTransformer;
-//import meldexun.nothirium.mc.asm.compatibility.CubicChunksTransformer;
-//import meldexun.nothirium.mc.asm.compatibility.FluidloggedAPITransformer;
-//import meldexun.nothirium.mc.asm.compatibility.ImmersivePetroleumTransformer;
-//import meldexun.nothirium.mc.asm.compatibility.MultiblockedTransformer;
-import meldexun.nothirium.mc.asm.compatibility.OptifineTransformer;
-//import meldexun.nothirium.mc.asm.compatibility.SecretRoomsTransformer;
-import net.minecraft.launchwrapper.IClassTransformer;
-import net.minecraft.launchwrapper.Launch;
-import net.minecraftforge.fml.common.asm.transformers.deobf.FMLDeobfuscatingRemapper;
 
 public class NothiriumClassTransformer extends HashMapClassNodeClassTransformer implements IClassTransformer {
 
@@ -57,6 +43,17 @@ public class NothiriumClassTransformer extends HashMapClassNodeClassTransformer 
 			throw new UnsupportedOperationException(e);
 		}
 	}
+
+    public static final boolean OPTIFINE_DETECTED;
+    static {
+        boolean flag = false;
+        try {
+            Class.forName("optifine.OptiFineClassTransformer", false, NothiriumPlugin.class.getClassLoader());
+            flag = true;
+        } catch (ClassNotFoundException e) {
+        }
+        OPTIFINE_DETECTED = flag;
+    }
 	
 	@Override
 	protected ClassWriter createClassWriter(int flags) {
@@ -74,19 +71,36 @@ public class NothiriumClassTransformer extends HashMapClassNodeClassTransformer 
 	@Override
 	protected void registerTransformers(IClassTransformerRegistry registry) {
 		// @formatter:off
-		registry.addObf("net.minecraft.client.renderer.RenderGlobal", "setWorldAndLoadRenderers", "func_72732_a", "(Lnet/minecraft/client/multiplayer/WorldClient;)V", ClassWriter.COMPUTE_FRAMES, methodNode -> {
-			LabelNode skipLabel = new LabelNode();
-			InsnList insns = new InsnList();
-			insns.add(new VarInsnNode(Opcodes.ALOAD, 1));
-			insns.add(new JumpInsnNode(Opcodes.IFNONNULL, skipLabel));
-			insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "meldexun/nothirium/mc/renderer/ChunkRenderManager", "dispose", "()V", false));
-			insns.add(skipLabel);
-			methodNode.instructions.insertBefore(
-				methodNode.instructions.getFirst(),
-				insns
-			);
+        if (!OPTIFINE_DETECTED){
+            registry.addObf("net.minecraft.client.renderer.RenderGlobal", "setWorldAndLoadRenderers", "func_72732_a", "(Lnet/minecraft/client/multiplayer/WorldClient;)V", ClassWriter.COMPUTE_FRAMES, methodNode -> {
+                LabelNode skipLabel = new LabelNode();
+                InsnList insns = new InsnList();
+                insns.add(new VarInsnNode(Opcodes.ALOAD, 1));
+                insns.add(new JumpInsnNode(Opcodes.IFNONNULL, skipLabel));
+                insns.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "meldexun/nothirium/mc/renderer/ChunkRenderManager", "dispose", "()V", false));
+                insns.add(skipLabel);
+                methodNode.instructions.insertBefore(
+                    methodNode.instructions.getFirst(),
+                    insns
+                );
+            });
+        }
 
-		});
+        //@formatter:off
+        if (OPTIFINE_DETECTED){
+            registry.addObf("net.minecraft.client.renderer.RenderGlobal", "setWorldAndLoadRenderers", "func_72732_a", "(Lnet/minecraft/client/multiplayer/WorldClient;)V", ClassWriter.COMPUTE_FRAMES, methodNode -> {
+                AbstractInsnNode targetNode1 = ASMUtil.first(methodNode).opcode(Opcodes.INVOKEINTERFACE).methodInsn("java/util/Set", "clear", "()V").find();
+                targetNode1 = ASMUtil.prev(methodNode, targetNode1).type(LabelNode.class).find();
+
+                AbstractInsnNode popNode1 = ASMUtil.last(methodNode).opcode(Opcodes.PUTFIELD).fieldInsnObf("net/minecraft/client/renderer/RenderGlobal", "viewFrustum", "field_175008_n", "Lnet/minecraft/client/renderer/ViewFrustum;").find();
+                popNode1 = ASMUtil.next(methodNode, popNode1).type(LabelNode.class).find();
+
+                methodNode.instructions.insert(targetNode1, ASMUtil.listOf(
+                        new MethodInsnNode(Opcodes.INVOKESTATIC, "meldexun/nothirium/mc/renderer/ChunkRenderManager", "dispose", "()V", false),
+                        new JumpInsnNode(Opcodes.GOTO, (LabelNode) popNode1)
+                ));
+            });
+        }
 
 		registry.addObf("net.minecraft.client.renderer.RenderGlobal", "loadRenderers", "func_72712_a", "()V", ClassWriter.COMPUTE_FRAMES, methodNode -> {
 			AbstractInsnNode targetNode1 = ASMUtil.first(methodNode).methodInsnObf("net/minecraft/client/renderer/RenderGlobal", "generateSky2", "func_174964_o", "()V").find();
@@ -99,16 +113,7 @@ public class NothiriumClassTransformer extends HashMapClassNodeClassTransformer 
 				new JumpInsnNode(Opcodes.GOTO, (LabelNode) popNode1)
 			));
 		});
-		// registry.addObf("net.minecraft.client.renderer.RenderGlobal", "setWorldAndLoadRenderers", "func_72732_a", "(Lnet/minecraft/client/multiplayer/WorldClient;)V", 2, methodNode -> {
-        //     AbstractInsnNode firstInsn = methodNode.instructions.getFirst();
-        //     methodNode.instructions.insertBefore(firstInsn, ASMUtil.listOf((AbstractInsnNode)new MethodInsnNode(184, "meldexun/nothirium/mc/renderer/ChunkRenderManager", "dispose", "()V", false)));
-        // });
 
-        // registry.addObf("net.minecraft.client.renderer.RenderGlobal", "loadRenderers", "func_72712_a", "()V", 2, methodNode -> {
-        //     AbstractInsnNode firstInsn = methodNode.instructions.getFirst();
-        //     methodNode.instructions.insertBefore(firstInsn, ASMUtil.listOf((AbstractInsnNode)new MethodInsnNode(184, "meldexun/nothirium/mc/renderer/ChunkRenderManager", "allChanged", "()V", false)));
-        // });
-		// @formatter:on
 
 		Map<Path, ZipFile> zipCache = new HashMap<>();
 		Predicate<String> doesClassExist = className -> {
@@ -145,30 +150,14 @@ public class NothiriumClassTransformer extends HashMapClassNodeClassTransformer 
 
 			return false;
 		};
-		// if (doesClassExist.test("mods.betterfoliage.loader.BetterFoliageLoader")) {
-		// 	BetterFoliageTransformer.registerTransformers(registry);
-		// }
-		// if (doesClassExist.test("lumien.chunkanimator.asm.LoadingPlugin")) {
-		// 	ChunkAnimatorTransformer.registerTransformers(registry);
-		// }
-		// if (doesClassExist.test("io.github.opencubicchunks.cubicchunks.core.asm.coremod.CubicChunksCoreMod")) {
-		// 	CubicChunksTransformer.registerTransformers(registry);
-		// }
-		// if (doesClassExist.test("git.jbredwards.fluidlogged_api.mod.asm.ASMHandler")) {
-		// 	FluidloggedAPITransformer.registerTransformers(registry);
-		// }
-		// if (doesClassExist.test("flaxbeard.immersivepetroleum.ImmersivePetroleum")) {
-		// 	ImmersivePetroleumTransformer.registerTransformers(registry);
-		// }
-		// if (doesClassExist.test("com.cleanroommc.multiblocked.core.MultiblockedLoadingPlugin")) {
-		// 	MultiblockedTransformer.registerTransformers(registry);
-		// }
+
 		if (doesClassExist.test("optifine.OptiFineClassTransformer")) {
 			OptifineTransformer.registerTransformers(registry);
 		}
-		// if (doesClassExist.test("com.wynprice.secretroomsmod.core.SecretRoomsCore")) {
-		// 	SecretRoomsTransformer.registerTransformers(registry);
-		// }
+        if (doesClassExist.test("com.replaymod.core.ReplayMod")) {
+            ReplayModTransformer.registerTransformers(registry);
+        }
+
 		IOException e = null;
 		for (ZipFile zip : zipCache.values()) {
 			try {
